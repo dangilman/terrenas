@@ -15,8 +15,7 @@ terrenas
 
 
 
-
-create training sets for gal-gal lensing
+Terrenas is an open-source code for generating images of strongly-lensed galaxies with dark matter substructure included in the lens model. Substructure is generated using pyHalo (https://github.com/dangilman/pyHalo). Realistic background sources from the cosmos catalog are generated using the software package paltas (https://github.com/swagnercarena/paltas). 
 
 
 * Free software: MIT license
