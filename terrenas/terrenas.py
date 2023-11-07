@@ -117,8 +117,8 @@ def sample_lens_light(seed, amp_min=1.0, amp_max=20.0,
 
 def sample_cosmos_source_light(seed, z_source, colossus_cosmo, cosmos_source_index=None, r_source_min=0.0,
                                r_source_max=0.2,
-                               cosmos_folder = '/home/birendra/Research_Codes/Machine_Learning/COSMOS_23.5_training_sample/'):
-                               #cosmos_folder=os.getenv('HOME') + '/data/cosmo_catalog/COSMOS_23.5_training_sample/'):
+                               #cosmos_folder = '/home/birendra/Research_Codes/Machine_Learning/COSMOS_23.5_training_sample/'):
+                               cosmos_folder=os.getenv('HOME') + '/data/cosmo_catalog/COSMOS_23.5_training_sample/'):
     np.random.seed(seed)
     if cosmos_source_index is None:
         cosmos_source_index = np.random.randint(0,
