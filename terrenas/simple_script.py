@@ -1,10 +1,11 @@
 import os
 import sys
 from terrenas.terrenas import single_iteration_HDF5
+import numpy as np
 
 group = int(sys.argv[1])
 
-seed = 1002 # Resolve the seed issue
+seed_array = np.arange(10**6).reshape(10**3,10**3)
 
 output_path = os.getenv('SCRATCH') + '/training_data/'
 kwargs_observing = {}
@@ -31,6 +32,7 @@ kwargs_sample_substructure = {'log_mlow': 6.0, 'log_mhigh': 10.0,
 numPix_kappa_map = 250
 
 for data_index in range(1, 1001):
+    seed = seed_array[group][data_index]
     single_iteration_HDF5(output_path, group, data_index, kwargs_observing, kwargs_sample_redshifts,
                          kwargs_sample_macromodel, kwargs_sample_source,
                          kwargs_sample_lens_light, kwargs_sample_substructure, save_image=True,
