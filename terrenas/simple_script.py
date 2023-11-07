@@ -13,16 +13,16 @@ kwargs_sample_redshifts = {'zd_min':0.5, 'zd_max':0.5,
                      'zs_min':1.5, 'zs_max':1.5}
 
 kwargs_sample_macromodel = {'theta_E_low':0.8, 'theta_E_high':1.2,
-                      'q_low':0.5, 'q_high':0.5,
+                      'q_low':0.75, 'q_high':0.75,
                       'log10_shear_mag_low':np.log10(0.05), 'log10_shear_mag_high':np.log10(0.05),
-                      'gamma_epl_low':1.9, 'gamma_epl_high':1.9,
-                      'a4_mean':0.005, 'a4_variance':0.0}
+                      'gamma_epl_low':1.9, 'gamma_epl_high':2.1,
+                      'a4_mean':0.0, 'a4_variance':0.0}
 
 kwargs_sample_source = {}
 kwargs_sample_lens_light = {}
 kwargs_sample_substructure = {'log_mlow': 6.0, 'log_mhigh': 10.0, 
                               'log10_sigma_sub_low': np.log10(0.05), 'log10_sigma_sub_high': np.log10(0.05), 
-                              'LOS_norm_low': 1.0, 'LOS_norm_high': 1.0, 
+                              'LOS_norm_low': 0.5, 'LOS_norm_high': 2.0, 
                               'log10_rescale_mc_amp_min': 0.0, 'log10_rescale_mc_amp_max': 0.0, 
                               # turns off rescaling of MC relation
                               'rescale_mc_slope_min': 0.0, 'rescale_mc_slope_max': 0.0, 
