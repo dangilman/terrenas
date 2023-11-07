@@ -117,7 +117,8 @@ def sample_lens_light(seed, amp_min=1.0, amp_max=20.0,
 
 def sample_cosmos_source_light(seed, z_source, colossus_cosmo, cosmos_source_index=None, r_source_min=0.0,
                                r_source_max=0.2,
-                               cosmos_folder=os.getenv('HOME') + '/data/cosmo_catalog/COSMOS_23.5_training_sample/'):
+                               cosmos_folder = '/home/birendra/Research_Codes/Machine_Learning/COSMOS_23.5_training_sample/'):
+                               #cosmos_folder=os.getenv('HOME') + '/data/cosmo_catalog/COSMOS_23.5_training_sample/'):
     np.random.seed(seed)
     if cosmos_source_index is None:
         cosmos_source_index = np.random.randint(0,
@@ -225,7 +226,7 @@ def simulate_single_image(seed, kwargs_observing, kwargs_sample_redshifts, kwarg
                             lens_light_model,
                             point_source_class=None, kwargs_numerics=kwargs_numerics)
 
-    image_sim_raw = imageModel.image(kwargs_lens_macro + kwargs_halos, kwargs_source, kwargs_lens_light)
+    #image_sim_raw = imageModel.image(kwargs_lens_macro + kwargs_halos, kwargs_source, kwargs_lens_light)
     image_sim = imageModel.image(kwargs_lens_macro + kwargs_halos, kwargs_source, kwargs_lens_light)
     poisson = image_util.add_poisson(image_sim, exp_time=exp_time)
     bkg = image_util.add_background(image_sim, sigma_bkd=background_rms)
@@ -256,7 +257,7 @@ def compute_correlation_function(kappa_map, window_size, kappa_map_resolution):
                                 normalization=False)
     r, x0 = xi_l(0, corr, r, mu)
     r, x2 = xi_l(2, corr, r, mu)
-    r_min, r_max = 10 ** -1.5, 10 ** -1.0
+    r_min, r_max = 3*kappa_map_resolution, 6*kappa_map_resolution#10 ** -1.5, 10 ** -1.0
     As0, n0 = fit_correlation_multipole(r, x0, r_min, r_max)
     As2, n2 = fit_correlation_multipole(r, x2, r_min, r_max)
     return r, x0, x2, As0, n0, As2, n2
@@ -336,8 +337,7 @@ def single_iteration_HDF5(output_path, group, data_index, kwargs_sample_observin
     if seed is None:
         seed = int(np.random.randint(0, 4294967295))
 
-    lensed_image, kappa_map, kappa_map_resolution, window_size, kwargs_lens_macro = simulate_single_image(seed, 
-                                                                                       kwargs_sample_observing,
+    lensed_image, kappa_map, kappa_map_resolution, window_size, kwargs_lens_macro = simulate_single_image(seed, kwargs_sample_observing,
                                                                                        kwargs_sample_redshifts,
                                                                                        kwargs_sample_macromodel,
                                                                                        kwargs_sample_source,
@@ -355,11 +355,15 @@ def single_iteration_HDF5(output_path, group, data_index, kwargs_sample_observin
         image = locals()['data_'+str(data_index)].create_dataset('image', data = lensed_image)
         image.attrs['kwargs_EPL'] = str(kwargs_lens_macro[0])
         image.attrs['kwargs_shear'] = str(kwargs_lens_macro[1])
+        image.attrs['kwargs_sample_redshifts'] = str(kwargs_sample_redshifts)
+        image.attrs['kwargs_sample_substructure'] = str(kwargs_sample_substructure)
+        image.attrs['kwargs_sample_macromodel'] = str(kwargs_sample_macromodel)
         image.attrs['seed'] = seed
+        image.attrs['numPix_kappa_map'] = numPix_kappa_map
+        image.attrs['window_size'] = window_size
 
     if save_kappa_map:
         kappa_map = locals()['data_'+str(data_index)].create_dataset('kappa_map', data = kappa_map)
-        kappa_map.attrs['numPix_kappa_map'] = numPix_kappa_map  
 
     corr_func = locals()['data_'+str(data_index)].create_dataset('correlation_function', data = multipoles) 
     corr_func.attrs['As0'] = As0
@@ -380,8 +384,13 @@ def read_HDF5_data(output_path, group, data_index, return_all = False):
     kwargs_EPL = ast.literal_eval(image.attrs['kwargs_EPL'])
     theta_E = kwargs_EPL['theta_E']
     kwargs_shear = ast.literal_eval(image.attrs['kwargs_shear'])
+    kwargs_sample_redshifts = ast.literal_eval(image.attrs['kwargs_sample_redshifts'])
+    kwargs_sample_substructure = ast.literal_eval(image.attrs['kwargs_sample_substructure'])
+    kwargs_sample_macromodel = ast.literal_eval(image.attrs['kwargs_sample_macromodel'])  
     seed = image.attrs['seed']
-
+    numPix_kappa_map = image.attrs['numPix_kappa_map']
+    window_size = image.attrs['window_size'] 
+    
     corr_func = file['data_'+str(data_index)+'/correlation_function']
     r = corr_func[0]
     x0 = corr_func[1]
@@ -392,6 +401,8 @@ def read_HDF5_data(output_path, group, data_index, return_all = False):
     n2 = corr_func.attrs['n2']  
 
     if return_all:
-        return image, kwargs_EPL, kwarg_shear, seed, r, x0, x2, As0, n0, As2, n2
+        return image, kwargs_EPL, kwargs_shear, kwargs_sample_redshifts, \
+                kwargs_sample_substructure, kwargs_sample_macromodel, seed, numPix_kappa_map, \
+                window_size, r, x0, x2, As0, n0, As2, n2
     else:
         return image, theta_E, r, x0, x2, As0, n0, As2, n2
