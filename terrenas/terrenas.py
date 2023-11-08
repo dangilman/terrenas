@@ -19,7 +19,9 @@ from lenstronomy.Util.param_util import phi_q2_ellipticity, shear_polar2cartesia
 #from lenstronomy.LensModel.Solver.lens_equation_solver import LensEquationSolver
 from paltas.Sources.cosmos import COSMOSCatalog
 import os
-
+import h5py
+import ast
+import json
 
 class RescaledDiemerJoyce(object):
     # implements the concentration-mass relation by Diemer and Joyce with a free overall scaling factor (rescale_amp)
@@ -115,6 +117,7 @@ def sample_lens_light(seed, amp_min=1.0, amp_max=20.0,
 
 def sample_cosmos_source_light(seed, z_source, colossus_cosmo, cosmos_source_index=None, r_source_min=0.0,
                                r_source_max=0.2,
+                               #cosmos_folder = '/home/birendra/Research_Codes/Machine_Learning/COSMOS_23.5_training_sample/'):
                                cosmos_folder=os.getenv('HOME') + '/data/cosmo_catalog/COSMOS_23.5_training_sample/'):
     np.random.seed(seed)
     if cosmos_source_index is None:
@@ -142,8 +145,8 @@ def sample_cosmos_source_light(seed, z_source, colossus_cosmo, cosmos_source_ind
     return source_model_list, kwargs_source
 
 
-def sample_sersic_source_light(seed, z_source, colossus_cosmo, r_source_min=0.0, r_source_max=0.2,
-                               cosmos_folder=os.getenv('HOME') + '/data/cosmo_catalog/COSMOS_23.5_training_sample/'):
+def sample_sersic_source_light(seed, z_source, colossus_cosmo, r_source_min=0.0, r_source_max=0.2):
+    
     # FOR TESTING...
     np.random.seed(seed)
 
@@ -223,7 +226,7 @@ def simulate_single_image(seed, kwargs_observing, kwargs_sample_redshifts, kwarg
                             lens_light_model,
                             point_source_class=None, kwargs_numerics=kwargs_numerics)
 
-    image_sim_raw = imageModel.image(kwargs_lens_macro + kwargs_halos, kwargs_source, kwargs_lens_light)
+    #image_sim_raw = imageModel.image(kwargs_lens_macro + kwargs_halos, kwargs_source, kwargs_lens_light)
     image_sim = imageModel.image(kwargs_lens_macro + kwargs_halos, kwargs_source, kwargs_lens_light)
     poisson = image_util.add_poisson(image_sim, exp_time=exp_time)
     bkg = image_util.add_background(image_sim, sigma_bkd=background_rms)
@@ -238,10 +241,10 @@ def simulate_single_image(seed, kwargs_observing, kwargs_sample_redshifts, kwarg
                                        redshift_list_macro=redshift_list_macro)[0]
 
     kappa_map_resolution = window_size / numPix_kappa_map
-    return simulated_lensed_image, kappa_map, kappa_map_resolution, window_size
+    return simulated_lensed_image, kappa_map, kappa_map_resolution, window_size, kwargs_lens_macro
 
 
-def training_labels(kappa_map, window_size, kappa_map_resolution):
+def compute_correlation_function(kappa_map, window_size, kappa_map_resolution):
     mu = np.linspace(-1, 1, 100)
     r = np.logspace(np.log10(kappa_map_resolution), -0.7, num=100, endpoint=True)
     corr = corr_kappa_with_mask(kappa_map,
@@ -254,7 +257,7 @@ def training_labels(kappa_map, window_size, kappa_map_resolution):
                                 normalization=False)
     r, x0 = xi_l(0, corr, r, mu)
     r, x2 = xi_l(2, corr, r, mu)
-    r_min, r_max = 10 ** -1.5, 10 ** -1.0
+    r_min, r_max = 3*kappa_map_resolution, 6*kappa_map_resolution#10 ** -1.5, 10 ** -1.0
     As0, n0 = fit_correlation_multipole(r, x0, r_min, r_max)
     As2, n2 = fit_correlation_multipole(r, x2, r_min, r_max)
     return r, x0, x2, As0, n0, As2, n2
@@ -265,26 +268,29 @@ def filenames(index, output_path):
     filename_corr = output_path + '/corr_function_' + str(index) + '.txt'
     filename_corr_statistics = output_path + '/corr_function_stats_' + str(index) + '.txt'
     filename_kappa_map = output_path + '/kappa_map_' + str(index) + '.txt'
-    return filename_image, filename_corr, filename_corr_statistics, filename_kappa_map
+    filename_kwargs_macro = output_path + '/kwargs_macro_' + str(index) + '.txt'
+    return filename_image, filename_corr, filename_corr_statistics, filename_kappa_map, filename_kwargs_macro
 
 
 def single_iteration(output_path, filename_index, kwargs_sample_observing, kwargs_sample_redshifts,
                      kwargs_sample_macromodel, kwargs_sample_source,
                      kwargs_sample_lens_light, kwargs_sample_substructure, save_image=True,
-                     save_correlation_function=False,
-                     save_corr_statsitics=True, save_kappa_map=False, numPix_kappa_map=250, seed=None):
+                     save_correlation_function=False, save_corr_statsitics=True, 
+                     save_kappa_map=False, save_kwargs_macro = False, numPix_kappa_map=250, seed=None):
+    
     if seed is None:
         seed = int(np.random.randint(0, 4294967295))
 
-    lensed_image, kappa_map, kappa_map_resolution, window_size = simulate_single_image(seed, kwargs_sample_observing,
+    lensed_image, kappa_map, kappa_map_resolution, window_size, kwargs_lens_macro = simulate_single_image(seed, 
+                                                                                       kwargs_sample_observing,
                                                                                        kwargs_sample_redshifts,
                                                                                        kwargs_sample_macromodel,
                                                                                        kwargs_sample_source,
                                                                                        kwargs_sample_lens_light,
                                                                                        kwargs_sample_substructure,
                                                                                        numPix_kappa_map)
-    r, x0, x2, As0, n0, As2, n2 = training_labels(kappa_map, window_size, kappa_map_resolution)
-    filename_image, filename_corr, filename_corr_statistics, filename_kappa_map = filenames(filename_index, output_path)
+    r, x0, x2, As0, n0, As2, n2 = compute_correlation_function(kappa_map, window_size, kappa_map_resolution)
+    filename_image, filename_corr, filename_corr_statistics, filename_kappa_map, filename_kwargs_macro = filenames(filename_index, output_path)
 
     if save_image:
         if os.path.exists(filename_image):
@@ -317,4 +323,86 @@ def single_iteration(output_path, filename_index, kwargs_sample_observing, kwarg
             np.savetxt(filename_kappa_map, X=combined)
         else:
             np.savetxt(filename_kappa_map, X=X)
+    if save_kwargs_macro:
+        with open(filename_kwargs_macro, 'w') as convert_file: 
+            convert_file.write(json.dumps(kwargs_lens_macro))
+            
     return
+
+def single_iteration_HDF5(output_path, group, data_index, kwargs_sample_observing, kwargs_sample_redshifts,
+                     kwargs_sample_macromodel, kwargs_sample_source,
+                     kwargs_sample_lens_light, kwargs_sample_substructure, save_image=True,
+                     save_kappa_map=False, numPix_kappa_map=250, seed=None):
+    
+    if seed is None:
+        seed = int(np.random.randint(0, 4294967295))
+
+    lensed_image, kappa_map, kappa_map_resolution, window_size, kwargs_lens_macro = simulate_single_image(seed, kwargs_sample_observing,
+                                                                                       kwargs_sample_redshifts,
+                                                                                       kwargs_sample_macromodel,
+                                                                                       kwargs_sample_source,
+                                                                                       kwargs_sample_lens_light,
+                                                                                       kwargs_sample_substructure,
+                                                                                       numPix_kappa_map)
+    r, x0, x2, As0, n0, As2, n2 = compute_correlation_function(kappa_map, window_size, kappa_map_resolution)
+    multipoles = np.stack((r,x0,x2))
+    
+    file_path = output_path + '/training_data_group_' + str(group) + '.h5'
+    file = h5py.File(file_path, 'a')
+    locals()['data_'+str(data_index)] = file.create_group('data_'+str(data_index))
+
+    if save_image:
+        image = locals()['data_'+str(data_index)].create_dataset('image', data = lensed_image)
+        image.attrs['kwargs_EPL'] = str(kwargs_lens_macro[0])
+        image.attrs['kwargs_shear'] = str(kwargs_lens_macro[1])
+        image.attrs['kwargs_sample_redshifts'] = str(kwargs_sample_redshifts)
+        image.attrs['kwargs_sample_substructure'] = str(kwargs_sample_substructure)
+        image.attrs['kwargs_sample_macromodel'] = str(kwargs_sample_macromodel)
+        image.attrs['seed'] = seed
+        image.attrs['numPix_kappa_map'] = numPix_kappa_map
+        image.attrs['window_size'] = window_size
+
+    if save_kappa_map:
+        kappa_map = locals()['data_'+str(data_index)].create_dataset('kappa_map', data = kappa_map)
+
+    corr_func = locals()['data_'+str(data_index)].create_dataset('correlation_function', data = multipoles) 
+    corr_func.attrs['As0'] = As0
+    corr_func.attrs['n0'] = n0
+    corr_func.attrs['As2'] = As2
+    corr_func.attrs['n2'] = n2
+
+    file.close()
+
+    return
+
+def read_HDF5_data(output_path, group, data_index, return_all = False):
+    
+    file_path = output_path + '/training_data_group_' + str(group) + '.h5'
+    file = h5py.File(file_path, 'r')
+                   
+    image = file['data_'+str(data_index)+'/image']
+    kwargs_EPL = ast.literal_eval(image.attrs['kwargs_EPL'])
+    theta_E = kwargs_EPL['theta_E']
+    kwargs_shear = ast.literal_eval(image.attrs['kwargs_shear'])
+    kwargs_sample_redshifts = ast.literal_eval(image.attrs['kwargs_sample_redshifts'])
+    kwargs_sample_substructure = ast.literal_eval(image.attrs['kwargs_sample_substructure'])
+    kwargs_sample_macromodel = ast.literal_eval(image.attrs['kwargs_sample_macromodel'])  
+    seed = image.attrs['seed']
+    numPix_kappa_map = image.attrs['numPix_kappa_map']
+    window_size = image.attrs['window_size'] 
+    
+    corr_func = file['data_'+str(data_index)+'/correlation_function']
+    r = corr_func[0]
+    x0 = corr_func[1]
+    x2 = corr_func[2]
+    As0 = corr_func.attrs['As0']  
+    n0 = corr_func.attrs['n0']          
+    As2 = corr_func.attrs['As2']  
+    n2 = corr_func.attrs['n2']  
+
+    if return_all:
+        return image, kwargs_EPL, kwargs_shear, kwargs_sample_redshifts, \
+                kwargs_sample_substructure, kwargs_sample_macromodel, seed, numPix_kappa_map, \
+                window_size, r, x0, x2, As0, n0, As2, n2
+    else:
+        return image, theta_E, r, x0, x2, As0, n0, As2, n2
