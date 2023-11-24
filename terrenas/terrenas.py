@@ -129,14 +129,14 @@ def sample_cosmos_source_light(seed, z_source, colossus_cosmo, cosmos_source_ind
 
     # in order to run the next few lines, you'll have to download the COSMOS catalog
     # cosmos_folder = '/home/birendra/Research_Codes/LOS-Lensing-master/COSMOS_23.5_training_sample/'
-    source_parameters = {'minimum_size_in_pixels': 10.0,
-                         'faintest_apparent_mag': -18,
-                         'max_z': 0.025,
-                         'smoothing_sigma': 0.001,
+    source_parameters = {'minimum_size_in_pixels': 64,
+                         'faintest_apparent_mag': 20, 
+                         'max_z': 1.0,
+                         'smoothing_sigma': 0.00,
                          'cosmos_folder': cosmos_folder,
-                         'random_rotation': 0.0,
-                         'min_flux_radius': 0.0,
-                         'output_ab_zeropoint': 25.95,
+                         'random_rotation': True,
+                         'min_flux_radius': 10.0,
+                         'output_ab_zeropoint': 25.127,
                          'z_source': z_source,
                          'center_x': ra_source,
                          'center_y': dec_source}
