@@ -31,7 +31,7 @@ kwargs_sample_substructure = {'log_mlow': 6.0, 'log_mhigh': 10.0,
 numPix_kappa_map = 250
 
 for group in range(1, 1001):
-    seed = seed_array[group][data_index]
+    seed = seed_array[group-1][data_index-1]
     index_array = pd.read_csv(index_file ,names=['catalog_i'])['catalog_i'].to_numpy()
     np.random.seed(seed)
     cosmos_source_index = index_array[np.random.randint(0, index_array.shape[0]-1)]
