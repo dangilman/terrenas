@@ -18,7 +18,7 @@ flip_pairs = None
 weight_terms = None
 # The path to the fodler containing the npy images
 # for training
-npy_folders_train = [os.getenv('HOME') + '/xena-scratch/fake_train/training_data_group_%d/'%(i) for i in range(1,3)]
+npy_folders_train = [os.getenv('HOME') + '/terrenas/fake_train/training_data_group_%d/'%(i) for i in range(1,3)]
 # The path to the tf_record for the training images
 tfr_train_paths = [
     os.path.join(path,'data.tfrecord') for path in npy_folders_train]
